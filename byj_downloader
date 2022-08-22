@@ -1,0 +1,60 @@
+import requests
+import time
+import os
+import subprocess
+from fake_useragent import UserAgent
+
+
+def get_ts_file(base_url, n=1, file_path='D:\\迅雷下载\\td\\tmp\\'):
+    ua = UserAgent()
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    headers = {
+        'User-Agent': ua.chrome
+    }
+    url = base_url + str(n).zfill(6) + '.ts'
+    requests.packages.urllib3.disable_warnings()
+    res = requests.get(url=url, headers=headers, verify=False)
+    if res.status_code != 200:
+        print(res.status_code)
+    while res.status_code == 200:
+        print(file_path + str(n).zfill(6) + '.ts')
+        if n < 20:
+            print(res.status_code)
+        with open(file_path + str(n).zfill(6) + '.ts', 'ab') as fp:
+            fp.write(res.content)
+            fp.flush()
+        n += 1
+        time.sleep(1)
+        res = requests.get(url=base_url + str(n).zfill(6) + '.ts', headers=headers, verify=False)
+        print(base_url + str(n).zfill(6) + '.ts')
+
+
+def get_file_list(file_path='D:\\迅雷下载\\td\\tmp\\'):
+    print('开始生成列表文件')
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    file_list = sorted(os.listdir(file_path))
+    with open(file_path + '\\file_list.txt', 'w+') as f:
+        for file in file_list:
+            f.write("file '{}'\n".format(file))
+    print('列表文件生成完毕')
+
+
+def merge_ts(file_dir, gen_file_name):
+    os.chdir(file_dir)
+    # abs_path = os.path.join(file_dir, gen_file_name)
+    subprocess.Popen('ffmpeg -f concat -i file_list.txt -c copy {}'.format(gen_file_name), shell=True)
+
+
+if __name__ == '__main__':
+    down_list = [
+        {'name': '2022082301', 'url': 'https://storage.banyinjia8.com/media/videos/hls/000/006/522/480p/'},
+    ]
+    for task in down_list:
+        print('开始任务:{}'.format(task['name']))
+        get_ts_file(base_url=task['url'], file_path='D:\\迅雷下载\\td\\' + task['name'] + '\\')
+        get_file_list(file_path='D:\\迅雷下载\\td\\' + task['name'] + '\\')
+        merge_ts(file_dir='D:\\迅雷下载\\td\\' + task['name'] + '\\', gen_file_name=task['name'] + '.mp4')
+        # break
+        time.sleep(120)
